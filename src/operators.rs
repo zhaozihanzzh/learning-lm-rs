@@ -82,8 +82,16 @@ pub fn swiglu(y: &mut Tensor<f32>, x: &Tensor<f32>) {
 
     // let _y = unsafe { y.data_mut() };
     // let _x = x.data();
+    assert!(y.size() == x.size());
+    let silux: Vec<f32> = x.data().iter().map(|i| {i / ((-i).exp() + 1.0)}).collect();
+    unsafe {
+        let y_mut = y.data_mut();
+        for i in 0..x.size() {
+            y_mut[i] = silux[i] * y_mut[i];    
+        }
+    }
 
-    todo!("实现 silu，这里给了一些前期准备工作的提示，你可以参考")
+    // todo!("实现 silu，这里给了一些前期准备工作的提示，你可以参考")
 }
 
 // C = beta * C + alpha * A @ B^T
