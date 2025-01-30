@@ -104,7 +104,7 @@ pub fn swiglu(y: &mut Tensor<f32>, x: &Tensor<f32>) {
     unsafe {
         let y_mut = y.data_mut();
         for i in 0..x.size() {
-            y_mut[i] = silux[i] * y_mut[i];    
+            y_mut[i] = silux[i] * y_mut[i];
         }
     }
 
