@@ -22,14 +22,43 @@ pub struct LLamaParams<T> {
 
 impl LLamaParams<f32> {
     pub fn from_safetensors(safetensor: &SafeTensors, config: &LlamaConfigJson) -> Self {
-        todo!("实现从safetensors文件的模型参数加载");
-        // let get_tensor: impl Fn(&str) -> Tensor<f32> = |name: &str| {
-        // ...    
-        // };
-        
-        // LLamaParams {
-        //     embedding_table: get_tensor(...),
-        //     ...
-        // }
+        // todo!("实现从safetensors文件的模型参数加载");
+        let get_tensor = |name: &str| {
+            for i in safetensor.tensors() {
+                if i.0 == name {
+                    let mut t: Tensor<f32> = Tensor::default(&Vec::from(i.1.shape()));
+                    unsafe {
+                        for j in 0..t.data().len() {
+                            t.data_mut()[j] = f32::from_ne_bytes([i.1.data()[j * 4], i.1.data()[j * 4 + 1], i.1.data()[j * 4 + 2], i.1.data()[j * 4 + 3]]);
+                        }
+                    }
+                    return Some(t);
+                }
+            }
+            return None;
+        };
+
+        let get_tensor_model_layers = |name: &str| {
+            let mut v = Vec::new();
+            for i in 0..config.num_hidden_layers {
+                v.push(get_tensor(&format!("model.layers.{}.{}", i, name))?);
+            }
+            Some(v)
+        };
+
+        LLamaParams {
+            embedding_table: get_tensor("lm_head.weight").unwrap(), // TODO: need to limit its range
+            rms_att_w: get_tensor_model_layers("input_layernorm.weight").unwrap(),
+            wq: get_tensor_model_layers("self_attn.q_proj.weight").unwrap(),
+            wk: get_tensor_model_layers("self_attn.k_proj.weight").unwrap(),
+            wv: get_tensor_model_layers("self_attn.v_proj.weight").unwrap(),
+            wo: get_tensor_model_layers("self_attn.o_proj.weight").unwrap(),
+            rms_ffn_w: get_tensor_model_layers("post_attention_layernorm.weight").unwrap(),
+            w_up: get_tensor_model_layers("mlp.up_proj.weight").unwrap(),
+            w_gate: get_tensor_model_layers("mlp.gate_proj.weight").unwrap(),
+            w_down: get_tensor_model_layers("mlp.down_proj.weight").unwrap(),
+            rms_out_w: get_tensor("model.norm.weight").unwrap(),
+            lm_head: get_tensor("lm_head.weight").unwrap(),
+        }
     }
 }
